@@ -2,7 +2,7 @@
 <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 
-<title>PA#1</title>
+<title>PA#2</title>
 <style>
     body {
         background-color: #EEEEEE;
@@ -21,10 +21,22 @@
 
 <p id="message">Drag your mouse on the cube to rotate it.<br>
 (On a touch screen, you can use your finger.)</p>
-
+<p>
+   <label for="x">&emsp;LIGHT X</label>
+   <input type="range" id="x" name="light x" min="-10" max="10" step="0.5" value="0">
+</p>
+<p>
+   <label for="y">&emsp;LIGHT Y</label>
+   <input type="range" id="y" name="light y" min="-10" max="10" step="0.5" value="0">
+</p>
+<p>
+   <label for="z">&emsp;LIGHT Z</label>
+   <input type="range" id="z" name="light z" min="-10" max="10" step="0.5" value="0">
+</p>
+</body>
 
 <div id="canvas-holder">
-   <canvas width="600" height="600" id="webglcanvas" style="background-color:red"></canvas>
+   <canvas width="600" height="600" id="webglcanvas" style="background-color:white"></canvas>
 </div>
 
 
