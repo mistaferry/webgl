@@ -58,8 +58,8 @@ function ShaderProgram(name, program) {
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
-function draw() { 
-    gl.clearColor(0,0,0,1);
+function draw() {
+    gl.clearColor(0, 0, 0, 0.35);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
     /* Set the values of the projection transformation */
@@ -88,13 +88,24 @@ function draw() {
 
 function CreateSurfaceData()
 {
-    let vertexList = [];
+    const vertexList = [];
+    const calculateCoordinates = (u, v) => {
+        const x = v * v * Math.sqrt(1 - v) * Math.cos(deg2rad(u));
+        const y = v * v * Math.sqrt(1 - v) * Math.sin(deg2rad(u));
+        return [x, y, v];
+    };
 
-    for (let i=0; i<360; i+=5) {
-        vertexList.push( Math.sin(deg2rad(i)), 1, Math.cos(deg2rad(i)) );
-        vertexList.push( Math.sin(deg2rad(i)), 0, Math.cos(deg2rad(i)) );
+    for (let u = 0; u <= 360; u += 9) {
+        for (let z = -1; z <= 1.1; z += 0.1) {
+            vertexList.push(...calculateCoordinates(u, z));
+        }
     }
 
+    for (let z = -1; z <= 1; z += 0.1) {
+        for (let u = 0; u <= 360; u += 9) {
+            vertexList.push(...calculateCoordinates(u, z));
+        }
+    }
     return vertexList;
 }
 
