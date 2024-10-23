@@ -5,36 +5,6 @@ let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 
-function deg2rad(angle) {
-    return angle * Math.PI / 180;
-}
-
-
-// Constructor
-function Model(name) {
-    this.name = name;
-    this.iVertexBuffer = gl.createBuffer();
-    this.count = 0;
-
-    this.BufferData = function(vertices) {
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
-
-        this.count = vertices.length/3;
-    }
-
-    this.Draw = function() {
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-        gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shProgram.iAttribVertex);
-   
-        gl.drawArrays(gl.LINE_STRIP, 0, this.count);
-    }
-}
-
-
 // Constructor
 function ShaderProgram(name, program) {
 
@@ -69,14 +39,16 @@ function draw() {
     let modelView = spaceball.getViewMatrix();
 
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
-    let translateToPointZero = m4.translation(0,0,-10);
+    let translateToPointZero = m4.translation(0,0,-22);
+    let scaled = m4.scaling(0.5,0.5,0.5)
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView );
-    let matAccum1 = m4.multiply(translateToPointZero, matAccum0 );
+    let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
+    let matAccum2 = m4.multiply(scaled, matAccum1)
         
     /* Multiply the projection matrix times the modelview matrix to give the
        combined transformation matrix, and send that to the shader program. */
-    let modelViewProjection = m4.multiply(projection, matAccum1 );
+    let modelViewProjection = m4.multiply(projection, matAccum2 );
 
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
     
@@ -85,19 +57,6 @@ function draw() {
 
     surface.Draw();
 }
-
-function CreateSurfaceData()
-{
-    let vertexList = [];
-
-    for (let i=0; i<360; i+=5) {
-        vertexList.push( Math.sin(deg2rad(i)), 1, Math.cos(deg2rad(i)) );
-        vertexList.push( Math.sin(deg2rad(i)), 0, Math.cos(deg2rad(i)) );
-    }
-
-    return vertexList;
-}
-
 
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
@@ -111,7 +70,20 @@ function initGL() {
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
 
     surface = new Model('Surface');
-    surface.BufferData(CreateSurfaceData());
+
+    let uPolysNum = 30; // Number of segments in the u direction
+    let vPolysNum = 100; // Number of segments in the v direction
+    let m = 3;          // Number of integral half-waves
+    let b = 3;          // Length of the segment
+    let n = 0.5;        // Damping factor
+    let q = 0;         // Phase shift
+    let a = 2;         // Amplitude
+
+    let surfaceData = CreateSurfaceData(uPolysNum, vPolysNum, m, b, n, q, a);
+
+    for (let polyline of surfaceData) {
+        surface.BufferData(polyline);
+    }
 
     gl.enable(gl.DEPTH_TEST);
 }
