@@ -5,6 +5,7 @@ let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 
+
 // Constructor
 function ShaderProgram(name, program) {
 
@@ -29,64 +30,67 @@ function ShaderProgram(name, program) {
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
 function draw() { 
-    gl.clearColor(0,0,0,1);
+    gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    
-    /* Set the values of the projection transformation */
-    let projection = m4.perspective(Math.PI/8, 1, 8, 12); 
-    
-    /* Get the view matrix from the SimpleRotator object.*/
+
+    // Set up the projection and model-view matrices
+    let projection = m4.perspective(Math.PI / 8, 1, 8, 12);
     let modelView = spaceball.getViewMatrix();
-
-    let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
-    let translateToPointZero = m4.translation(0,0,-22);
-    let scaled = m4.scaling(0.5,0.5,0.5)
-
-    let matAccum0 = m4.multiply(rotateToPointZero, modelView );
+    let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0.7);
+    let translateToPointZero = m4.translation(0, 0, -10);
+    let matAccum0 = m4.multiply(rotateToPointZero, modelView);
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
-    let matAccum2 = m4.multiply(scaled, matAccum1)
-        
-    /* Multiply the projection matrix times the modelview matrix to give the
-       combined transformation matrix, and send that to the shader program. */
-    let modelViewProjection = m4.multiply(projection, matAccum2 );
+    let modelViewProjection = m4.multiply(projection, matAccum1);
 
-    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
-    
-    /* Draw the six faces of a cube, with different colors. */
-    gl.uniform4fv(shProgram.iColor, [1,1,0,1] );
+    // Set uniform values for the shader
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
 
-    surface.Draw();
+    // Draw filled triangles
+    gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);  // Set color for triangles
+    surface.DrawTriangles();
+
+    // Draw wireframe polylines
+    gl.uniform4fv(shProgram.iColor, [1, 0, 0, 1]);  // Set color for polylines
+    surface.DrawPolyline();
 }
+
+
+
 
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
-    let prog = createProgram( gl, vertexShaderSource, fragmentShaderSource );
+    let prog = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 
     shProgram = new ShaderProgram('Basic', prog);
     shProgram.Use();
 
-    shProgram.iAttribVertex              = gl.getAttribLocation(prog, "vertex");
+    shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
-    shProgram.iColor                     = gl.getUniformLocation(prog, "color");
+    shProgram.iColor = gl.getUniformLocation(prog, "color");
 
-    surface = new Model('Surface');
+    // Prepare surface data
+    let uPolysNum = 30;  // Example granularity in U direction
+    let vPolysNum = 30;  // Example granularity in V direction
+    let a = 1, n = 1, m = 1, b = 1, q = 0;  // Parameters for surface equation
 
-    let uPolysNum = 30; // Number of segments in the u direction
-    let vPolysNum = 100; // Number of segments in the v direction
-    let m = 3;          // Number of integral half-waves
-    let b = 3;          // Length of the segment
-    let n = 0.5;        // Damping factor
-    let q = 0;         // Phase shift
-    let a = 2;         // Amplitude
-
+    // Generate surface data
     let surfaceData = CreateSurfaceData(uPolysNum, vPolysNum, m, b, n, q, a);
+    
+    surface = new Model('Surface');
+    
+    // Buffer polylines
+    surfaceData.forEach(polyline => {
+        surface.BufferPolylineData(polyline);
+    });
 
-    for (let polyline of surfaceData) {
-        surface.BufferData(polyline);
-    }
+    // Buffer triangle data for filled surface
+    let data = {};
+    CreateComplexSurface(data);  // Generate vertices and indices for triangles
+    surface.BufferTriangleData(data.verticesF32, data.indicesU16);
 
     gl.enable(gl.DEPTH_TEST);
 }
+
 
 
 /* Creates a program for use in the WebGL context gl, and returns the
@@ -129,19 +133,18 @@ function init() {
     try {
         canvas = document.getElementById("webglcanvas");
         gl = canvas.getContext("webgl");
-        if ( ! gl ) {
+        if (!gl) {
             throw "Browser does not support WebGL";
         }
-    }
-    catch (e) {
+    } catch (e) {
         document.getElementById("canvas-holder").innerHTML =
             "<p>Sorry, could not get a WebGL graphics context.</p>";
         return;
     }
+
     try {
-        initGL();  // initialize the WebGL graphics context
-    }
-    catch (e) {
+        initGL();  // Initialize the WebGL graphics context
+    } catch (e) {
         document.getElementById("canvas-holder").innerHTML =
             "<p>Sorry, could not initialize the WebGL graphics context: " + e + "</p>";
         return;
