@@ -2,15 +2,16 @@ function deg2rad(angle) {
     return angle * Math.PI / 180;
 }
 
-// Vertex class to represent each vertex with a position, normal, and triangles it belongs to
-function Vertex(position) {
-    this.position = position;
+
+function Vertex(p)
+{
+    this.p = p;
     this.normal = [];
     this.triangles = [];
 }
 
-// Triangle class to represent each triangle with vertices, normal, and tangent
-function Triangle(v0, v1, v2) {
+function Triangle(v0, v1, v2)
+{
     this.v0 = v0;
     this.v1 = v1;
     this.v2 = v2;
@@ -18,28 +19,15 @@ function Triangle(v0, v1, v2) {
     this.tangent = [];
 }
 
-// Updated Model class to hold multiple vertex buffers for polylines and render each
-// Model class to manage vertex buffers and rendering
+// Constructor
 function Model(name) {
     this.name = name;
-    this.vertexBuffers = []; // Array for multiple vertex buffers
-    this.counts = [];        // Array for counts in each buffer
     this.iVertexBuffer = gl.createBuffer();
     this.iIndexBuffer = gl.createBuffer();
     this.count = 0;
 
-    // Buffers data for line strips (polylines)
-    this.BufferPolylineData = function(vertices) {
-        const vertexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+    this.BufferData = function(vertices, indices) {
 
-        this.vertexBuffers.push(vertexBuffer);
-        this.counts.push(vertices.length / 3); // Store vertex count
-    };
-
-    // Buffers data for triangles
-    this.BufferTriangleData = function(vertices, indices) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STREAM_DRAW);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
@@ -49,94 +37,93 @@ function Model(name) {
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STREAM_DRAW);
 
         this.count = indices.length;
-    };
+    }
 
-    // Draws polylines
-    this.DrawPolyline = function() {
-        for (let i = 0; i < this.vertexBuffers.length; i++) {
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers[i]);
-            gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
-            gl.enableVertexAttribArray(shProgram.iAttribVertex);
-            gl.drawArrays(gl.LINE_STRIP, 0, this.counts[i]);
-        }
-    };
+    this.Draw = function() {
 
-    // Draws triangles
-    this.DrawTriangles = function() {
+        //gl.drawArrays(gl.LINE_STRIP, 0, this.count);
         gl.drawElements(gl.TRIANGLES, this.count, gl.UNSIGNED_SHORT, 0);
-    };
-}
-
-
-// Generates the surface data for U and V polylines with specific parameters
-function CreateSurfaceData(uPolysNum, vPolysNum, m, b, n, q, a) {
-    let allPolylines = []; // Array to hold all polylines
-
-    // Calculates w based on number of half-waves and line segment length
-    let w = (m * Math.PI) / b;
-
-    // Generate U and V polylines
-    getUPolylines(uPolysNum, vPolysNum, a, n, w, q, b, allPolylines);
-    getVPolylines(uPolysNum, vPolysNum, a, n, w, q, b, allPolylines);
-
-    return allPolylines; // Returns all generated polylines
-}
-
-// Creates U-direction polylines and adds them to allPolylines array
-function getUPolylines(uPolysNum, vPolysNum, a, n, w, q, b, allPolylines) {
-    for (let i = 0; i <= uPolysNum; i++) {
-        let u = (i * 2 * Math.PI) / uPolysNum; // Adjust u
-        let uPolyline = [];
-        for (let j = 0; j <= vPolysNum; j++) {
-            let v = (j * b) / vPolysNum; // Adjust v
-            let x = v * Math.cos(u);
-            let y = v * Math.sin(u);
-            let z = a * Math.exp(-n * v) * Math.sin(w * v + q);
-            uPolyline.push(x, y, z);
-        }
-        allPolylines.push(uPolyline);
     }
 }
 
-// Creates V-direction polylines and adds them to allPolylines array
+function CreateData(uPolysNum, vPolysNum, m, b, n, q, a) {
+    let allPolylines = []; // Array to hold all polylines
+
+    let w = (m * Math.PI) / b;
+
+    getVPolylines(uPolysNum, vPolysNum, a, n, w, q, b, allPolylines);
+
+    return allPolylines;
+}
+
 function getVPolylines(uPolysNum, vPolysNum, a, n, w, q, b, allPolylines) {
-    for (let i = 0; i <= vPolysNum; i++) {
+    for (let i=0, ang = 0; i<vPolysNum; i++, ang+=5) {
         let v = (i * b) / vPolysNum; // Adjust v
-        let vPolyline = [];
-        for (let j = 0; j <= uPolysNum; j++) {
+        for (let j=0, ang = 0; j<uPolysNum; j++, ang+=5) {
             let u = (j * 2 * Math.PI) / uPolysNum; // Adjust u
             let x = v * Math.cos(u);
             let y = v * Math.sin(u);
             let z = a * Math.exp(-n * v) * Math.sin(w * v + q);
-            vPolyline.push(x, y, z);
+            allPolylines.push(new Vertex([x, y, z]));
         }
-        allPolylines.push(vPolyline);
     }
 }
 
-// Constructor
-function CreateComplexSurface(data) {
+function CreateSurfaceData(data) {
     let vertices = [];
     let triangles = [];
 
-    for (let i = 0, ang = 0; i < 72; i++, ang += 5) {
-        vertices.push(new Vertex([Math.sin(deg2rad(ang)), 0, Math.cos(deg2rad(ang))]));
-    }
+    // Prepare surface data
+    let uPolysNum = 10;
+    let vPolysNum = 10; 
+    let a = 1, n = 1, m = 1, b = 1, q = 0;
 
-    for (let i = 0, ang = 0; i < 72; i++, ang += 5) {
-        let v0ind = vertices.length;
-        vertices.push(new Vertex([Math.sin(deg2rad(ang)), 1, Math.cos(deg2rad(ang))]));
+    // Generate surface data
+    vertices = CreateData(uPolysNum, vPolysNum, m, b, n, q, a);
+    
+    for (let lineIndex = 1; lineIndex < vPolysNum; lineIndex++) {
+        let currentLineOffset = lineIndex * vPolysNum;
+        let previousLineOffset = (lineIndex - 1) * vPolysNum;
+    
+        for (let i = 0; i < vPolysNum; i++) {
+            let v0ind = currentLineOffset + i;
+            let v3ind = previousLineOffset + i;
+            let v1ind = previousLineOffset + ((i + 1) % vPolysNum);
+            let v2ind = currentLineOffset + ((i + 1) % vPolysNum);
 
-        if (i > 0) {
-            let v1ind = v0ind - 73;
-            let v2ind = v0ind - 1;
-            let v3ind = v0ind - 72;
-
-            triangles.push(new Triangle(v0ind, v1ind, v2ind));
-            triangles.push(new Triangle(v0ind, v3ind, v1ind));
+            // Create the first triangle
+            let trian = new Triangle(v0ind, v1ind, v2ind);
+            let trianInd = triangles.length;
+            triangles.push(trian);
+            let v = vertices[v0ind];
+            let t = vertices[v0ind].triangles;
+            vertices[v0ind].triangles.push(trianInd);
+            vertices[v1ind].triangles.push(trianInd);
+            vertices[v2ind].triangles.push(trianInd);
+    
+            // Create the second triangle
+            let trian2 = new Triangle(v0ind, v2ind, v3ind);
+            let trianInd2 = triangles.length;
+            triangles.push(trian2);
+            vertices[v0ind].triangles.push(trianInd2);
+            vertices[v2ind].triangles.push(trianInd2);
+            vertices[v3ind].triangles.push(trianInd2);
         }
     }
 
-    data.verticesF32 = new Float32Array(vertices.flatMap(v => v.position));
-    data.indicesU16 = new Uint16Array(triangles.flatMap(t => [t.v0, t.v1, t.v2]));
+    data.verticesF32 = new Float32Array(vertices.length*3);
+    for (let i=0, len=vertices.length; i<len; i++)
+    {
+        data.verticesF32[i*3 + 0] = vertices[i].p[0];
+        data.verticesF32[i*3 + 1] = vertices[i].p[1];
+        data.verticesF32[i*3 + 2] = vertices[i].p[2];
+    }
+
+    data.indicesU16 = new Uint16Array(triangles.length*3);
+    for (let i=0, len=triangles.length; i<len; i++)
+    {
+        data.indicesU16[i*3 + 0] = triangles[i].v0;
+        data.indicesU16[i*3 + 1] = triangles[i].v1;
+        data.indicesU16[i*3 + 2] = triangles[i].v2;
+    }
 }
