@@ -74,8 +74,8 @@ function CreateSurfaceData(data) {
     let triangles = [];
 
     // Prepare surface data
-    let uPolysNum = 10;
-    let vPolysNum = 10; 
+    let uPolysNum = 5;
+    let vPolysNum = 5; 
     let a = 1, n = 1, m = 1, b = 1, q = 0;
 
     // Generate surface data
@@ -85,29 +85,17 @@ function CreateSurfaceData(data) {
         let currentLineOffset = lineIndex * vPolysNum;
         let previousLineOffset = (lineIndex - 1) * vPolysNum;
     
-        for (let i = 0; i < vPolysNum; i++) {
+        for (let i = 0; i < uPolysNum; i++) {
             let v0ind = currentLineOffset + i;
             let v3ind = previousLineOffset + i;
-            let v1ind = previousLineOffset + ((i + 1) % vPolysNum);
-            let v2ind = currentLineOffset + ((i + 1) % vPolysNum);
+            let v1ind = previousLineOffset + ((i + 1) % uPolysNum);
+            let v2ind = currentLineOffset + ((i + 1) % uPolysNum);
 
             // Create the first triangle
-            let trian = new Triangle(v0ind, v1ind, v2ind);
-            let trianInd = triangles.length;
-            triangles.push(trian);
-            let v = vertices[v0ind];
-            let t = vertices[v0ind].triangles;
-            vertices[v0ind].triangles.push(trianInd);
-            vertices[v1ind].triangles.push(trianInd);
-            vertices[v2ind].triangles.push(trianInd);
+            createTriangle(v0ind, v1ind, v2ind, triangles, vertices);
     
             // Create the second triangle
-            let trian2 = new Triangle(v0ind, v2ind, v3ind);
-            let trianInd2 = triangles.length;
-            triangles.push(trian2);
-            vertices[v0ind].triangles.push(trianInd2);
-            vertices[v2ind].triangles.push(trianInd2);
-            vertices[v3ind].triangles.push(trianInd2);
+            createTriangle(v0ind, v1ind, v3ind, triangles, vertices);
         }
     }
 
@@ -127,3 +115,12 @@ function CreateSurfaceData(data) {
         data.indicesU16[i*3 + 2] = triangles[i].v2;
     }
 }
+function createTriangle(vertex1, vertex2, vertex3, triangles, vertices) {
+    let trian2 = new Triangle(vertex1, vertex2, vertex3);
+    let trianInd2 = triangles.length;
+    triangles.push(trian2);
+    vertices[vertex1].triangles.push(trianInd2);
+    vertices[vertex2].triangles.push(trianInd2);
+    vertices[vertex3].triangles.push(trianInd2);
+}
+
