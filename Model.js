@@ -1,3 +1,5 @@
+
+
 function deg2rad(angle) {
     return angle * Math.PI / 180;
 }
@@ -24,22 +26,40 @@ function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
     this.iIndexBuffer = gl.createBuffer();
+    this.iNormalBuffer = gl.createBuffer();
     this.count = 0;
 
-    this.BufferData = function(vertices, indices) {
-
+    this.BufferData = function(vertices, indices, normals) {
+        // Vertex buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STREAM_DRAW);
+        // gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+        // gl.enableVertexAttribArray(shProgram.iAttribVertex);
+    
+        // Normal buffer (if using)
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
+        // gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
+        // gl.enableVertexAttribArray(shProgram.iAttribNormal);
+
+            
+        // Index buffer
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.iIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STREAM_DRAW);
+    
+        this.count = indices.length;
+    }
+    
+
+    this.Draw = function() {
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.iIndexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STREAM_DRAW);
-
-        this.count = indices.length;
-    }
-
-    this.Draw = function() {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribNormal);
 
         //gl.drawArrays(gl.LINE_STRIP, 0, this.count);
         gl.drawElements(gl.TRIANGLES, this.count, gl.UNSIGNED_SHORT, 0);
@@ -57,9 +77,9 @@ function CreateData(uPolysNum, vPolysNum, m, b, n, q, a) {
 }
 
 function getVPolylines(uPolysNum, vPolysNum, a, n, w, q, b, allPolylines) {
-    for (let i=0, ang = 0; i<vPolysNum; i++, ang+=5) {
+    for (let i=0; i<vPolysNum; i++) {
         let v = (i * b) / vPolysNum; // Adjust v
-        for (let j=0, ang = 0; j<uPolysNum; j++, ang+=5) {
+        for (let j=0; j<uPolysNum; j++) {
             let u = (j * 2 * Math.PI) / uPolysNum; // Adjust u
             let x = v * Math.cos(u);
             let y = v * Math.sin(u);
@@ -72,6 +92,7 @@ function getVPolylines(uPolysNum, vPolysNum, a, n, w, q, b, allPolylines) {
 function CreateSurfaceData(data) {
     let vertices = [];
     let triangles = [];
+    let normals = [];
 
     // Prepare surface data
     let uPolysNum = 5;
@@ -81,23 +102,11 @@ function CreateSurfaceData(data) {
     // Generate surface data
     vertices = CreateData(uPolysNum, vPolysNum, m, b, n, q, a);
     
-    for (let lineIndex = 1; lineIndex < vPolysNum; lineIndex++) {
-        let currentLineOffset = lineIndex * vPolysNum;
-        let previousLineOffset = (lineIndex - 1) * vPolysNum;
-    
-        for (let i = 0; i < uPolysNum; i++) {
-            let v0ind = currentLineOffset + i;
-            let v3ind = previousLineOffset + i;
-            let v1ind = previousLineOffset + ((i + 1) % uPolysNum);
-            let v2ind = currentLineOffset + ((i + 1) % uPolysNum);
+    calculateTriangles(vPolysNum, uPolysNum, triangles, vertices);
 
-            // Create the first triangle
-            createTriangle(v0ind, v1ind, v2ind, triangles, vertices);
-    
-            // Create the second triangle
-            createTriangle(v0ind, v1ind, v3ind, triangles, vertices);
-        }
-    }
+    calculateFacetNormal(uPolysNum, vPolysNum, vertices, triangles, normals);
+    // calculateFacetNormal(vertices, triangles);
+
 
     data.verticesF32 = new Float32Array(vertices.length*3);
     for (let i=0, len=vertices.length; i<len; i++)
@@ -114,8 +123,37 @@ function CreateSurfaceData(data) {
         data.indicesU16[i*3 + 1] = triangles[i].v1;
         data.indicesU16[i*3 + 2] = triangles[i].v2;
     }
+
+    data.normalsF32 = new Float32Array(normals.length);
+    for (let i=0, len=normals.length; i<len; i++)
+    {
+        data.normalsF32[i*3 + 0] = (normals[i])[0];
+        data.normalsF32[i*3 + 1] = (normals[i])[1];
+        data.normalsF32[i*3 + 2] = (normals[i])[2];
+    }
 }
-function createTriangle(vertex1, vertex2, vertex3, triangles, vertices) {
+
+function calculateTriangles(vPolysNum, uPolysNum, triangles, vertices) {
+    for (let lineIndex = 1; lineIndex < vPolysNum; lineIndex++) {
+        let currentLineOffset = lineIndex * uPolysNum;
+        let previousLineOffset = (lineIndex - 1) * uPolysNum;
+
+        for (let i = 0; i < uPolysNum; i++) {
+            let v0ind = currentLineOffset + i;
+            let v3ind = previousLineOffset + i;
+            let v1ind = previousLineOffset + ((i + 1) % uPolysNum);
+            let v2ind = currentLineOffset + ((i + 1) % uPolysNum);
+
+            // Set the first triangle
+            setTriangleVertexes(v0ind, v1ind, v2ind, triangles, vertices);
+
+            // Set the second triangle
+            setTriangleVertexes(v0ind, v1ind, v3ind, triangles, vertices);
+        }
+    }
+}
+
+function setTriangleVertexes(vertex1, vertex2, vertex3, triangles, vertices) {
     let trian2 = new Triangle(vertex1, vertex2, vertex3);
     let trianInd2 = triangles.length;
     triangles.push(trian2);
@@ -123,4 +161,97 @@ function createTriangle(vertex1, vertex2, vertex3, triangles, vertices) {
     vertices[vertex2].triangles.push(trianInd2);
     vertices[vertex3].triangles.push(trianInd2);
 }
+
+// function calculateFacetNormal(vertices, indices) {
+//     const normals = new Float32Array(vertices.length).fill(0);
+    
+//     for (let i = 0; i < indices.length; i += 3) {
+//         const v0 = indices[i] * 3;
+//         const v1 = indices[i + 1] * 3;
+//         const v2 = indices[i + 2] * 3;
+
+//         // Extract the vertices of the triangle
+//         const p0 = [vertices[v0], vertices[v0 + 1], vertices[v0 + 2]];
+//         const p1 = [vertices[v1], vertices[v1 + 1], vertices[v1 + 2]];
+//         const p2 = [vertices[v2], vertices[v2 + 1], vertices[v2 + 2]];
+
+//         // Calculate the two edge vectors
+//         const edge1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+//         const edge2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
+
+//         // Calculate the normal using the cross product
+//         const normal = [
+//             edge1[1] * edge2[2] - edge1[2] * edge2[1],
+//             edge1[2] * edge2[0] - edge1[0] * edge2[2],
+//             edge1[0] * edge2[1] - edge1[1] * edge2[0]
+//         ];
+
+//         // Normalize the normal vector
+//         const length = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
+//         if (length > 0) {
+//             normal[0] /= length;
+//             normal[1] /= length;
+//             normal[2] /= length;
+//         }
+
+//         // Assign the same normal to all three vertices of the triangle
+//         for (let j = 0; j < 3; j++) {
+//             normals[v0 + j] = normal[j];
+//             normals[v1 + j] = normal[j];
+//             normals[v2 + j] = normal[j];
+//         }
+//     }
+
+//     return normals;
+// }
+
+function calculateFacetNormal(uPolysNum, vPolysNum, vertices, triangles, normals) {
+    // Для кожного вертекса обчислюємо нормаль
+    for (let index = 0; index < vertices.length; index++) {
+        let vertex = vertices[index];
+        let normal = [0, 0, 0];
+
+        // Проходимо через всі трикутники, що містять цей вертекс
+        for (let triangleIndex of vertex.triangles) {
+            let triangle = triangles[triangleIndex];
+
+            // Обчислюємо нормаль цього трикутника
+            let triNormal = computeNormalForTriangle(triangle.v0, triangle.v1, triangle.v2, vertices);
+
+            // Додаємо нормаль трикутника до нормалі вертекса
+            normal[0] += triNormal[0];
+            normal[1] += triNormal[1];
+            normal[2] += triNormal[2];
+        }
+
+        // Нормалізуємо суму нормалей
+        let normalizedNormal = m4.normalize(normal);
+
+        // Додаємо нормаль до масиву нормалей
+        normals.push(normalizedNormal);
+
+        // Присвоюємо індекс нормалі вертексу
+        vertex.normal.push(normals.length - 1);
+    }
+}
+
+
+function computeNormalForTriangle(v0, v1, v2, vertices) {
+    v0 = vertices[v0];
+    v1 = vertices[v1];
+    v2 = vertices[v2];
+
+    let v1v0 = [v1.p[0] - v0.p[0], v1.p[1] - v0.p[1], v1.p[2] - v0.p[2]];
+    let v2v0 = [v2.p[0] - v0.p[0], v2.p[1] - v0.p[1], v2.p[2] - v0.p[2]];
+
+    // Перехресний добуток для отримання нормалі
+    let normal = m4.cross(v1v0, v2v0);
+
+    // Нормалізація нормалі
+    let normalizedNormal = m4.normalize(normal);
+    return normalizedNormal;
+}
+
+
+
 

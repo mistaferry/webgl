@@ -14,6 +14,8 @@ function ShaderProgram(name, program) {
 
     // Location of the attribute variable in the shader program.
     this.iAttribVertex = -1;
+
+    this.iAttribNormal = -1;
     // Location of the uniform specifying a color for the primitive.
     this.iColor = -1;
     // Location of the uniform matrix representing the combined transformation.
@@ -67,15 +69,17 @@ function initGL() {
     shProgram.Use();
 
     shProgram.iAttribVertex              = gl.getAttribLocation(prog, "vertex");
+    shProgram.iAttribNormal              = gl.getAttribLocation(prog, "normal");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
+    gl.uniform3fv(shProgram.lightDir, [1.0, 1.0, 1.0]); // Adjust the direction as needed
 
     let data = {};
     
     CreateSurfaceData(data)
 
     surface = new Model('Surface');
-    surface.BufferData(data.verticesF32, data.indicesU16);
+    surface.BufferData(data.verticesF32, data.indicesU16, data.normalsF32);
 
     gl.enable(gl.DEPTH_TEST);
 }
