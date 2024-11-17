@@ -1,13 +1,24 @@
-
-
 // Vertex shader
+
 const vertexShaderSource = `
-attribute vec3 vertex;
-uniform mat4 ModelViewProjectionMatrix;
+attribute vec3 vertex;  // Vertex position attribute
+attribute vec3 normal;    // Normal vector attribute
+
+// Output to fragment shader
+varying vec3 fragPosition;   // Pass position to fragment shader
+varying vec3 fragNormal;     // Pass normal to fragment shader
+
+uniform mat4 ModelViewProjectionMatrix;  // Model-view-projection matrix
 
 void main() {
-    gl_Position = ModelViewProjectionMatrix * vec4(vertex,1.0);
+    // Pass position and normal to fragment shader
+    fragPosition = vertex;
+    fragNormal = normalize(normal);  // Normalize normal
+    
+    // Apply the model-view-projection transformation to vertex position
+    gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
 }`;
+
 
 
 // Fragment shader
@@ -18,11 +29,36 @@ const fragmentShaderSource = `
    precision mediump float;
 #endif
 
-uniform vec4 color;
+// Input from vertex shader
+varying vec3 fragPosition;  // Position of the fragment
+varying vec3 fragNormal;    // Normal at the fragment
+
+// Uniforms for light and material properties
+uniform vec3 ambientColor;
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform float shininess;
+uniform vec3 lightPos;  // Position of the light
+uniform vec3 viewPos;   // Position of the viewer/camera
+
 void main() {
-    gl_FragColor = color;
+    // Calculate the ambient component
+    vec3 ambient = ambientColor;
+
+    // Calculate the diffuse component
+    vec3 lightDir = normalize(lightPos - fragPosition);  // Direction of light
+    float diff = max(dot(fragNormal, lightDir), 0.0);   // Diffuse factor
+    vec3 diffuse = diffuseColor * diff;
+
+    // Calculate the specular component
+    vec3 viewDir = normalize(viewPos - fragPosition);  // Direction towards the viewer
+    vec3 reflectDir = reflect(-lightDir, fragNormal);  // Reflection direction
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);  // Specular factor
+    vec3 specular = specularColor * spec;
+
+    // Combine all components: Irgb = Ambient + Diffuse + Specular
+    vec3 result = ambient + diffuse + specular;
+
+    // Set the final color
+    gl_FragColor = vec4(result, 1.0);
 }`;
-
-
-
-// 

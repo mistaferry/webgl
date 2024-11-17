@@ -162,48 +162,7 @@ function setTriangleVertexes(vertex1, vertex2, vertex3, triangles, vertices) {
     vertices[vertex3].triangles.push(trianInd2);
 }
 
-// function calculateFacetNormal(vertices, indices) {
-//     const normals = new Float32Array(vertices.length).fill(0);
-    
-//     for (let i = 0; i < indices.length; i += 3) {
-//         const v0 = indices[i] * 3;
-//         const v1 = indices[i + 1] * 3;
-//         const v2 = indices[i + 2] * 3;
 
-//         // Extract the vertices of the triangle
-//         const p0 = [vertices[v0], vertices[v0 + 1], vertices[v0 + 2]];
-//         const p1 = [vertices[v1], vertices[v1 + 1], vertices[v1 + 2]];
-//         const p2 = [vertices[v2], vertices[v2 + 1], vertices[v2 + 2]];
-
-//         // Calculate the two edge vectors
-//         const edge1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
-//         const edge2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
-
-//         // Calculate the normal using the cross product
-//         const normal = [
-//             edge1[1] * edge2[2] - edge1[2] * edge2[1],
-//             edge1[2] * edge2[0] - edge1[0] * edge2[2],
-//             edge1[0] * edge2[1] - edge1[1] * edge2[0]
-//         ];
-
-//         // Normalize the normal vector
-//         const length = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
-//         if (length > 0) {
-//             normal[0] /= length;
-//             normal[1] /= length;
-//             normal[2] /= length;
-//         }
-
-//         // Assign the same normal to all three vertices of the triangle
-//         for (let j = 0; j < 3; j++) {
-//             normals[v0 + j] = normal[j];
-//             normals[v1 + j] = normal[j];
-//             normals[v2 + j] = normal[j];
-//         }
-//     }
-
-//     return normals;
-// }
 
 function calculateFacetNormal(uPolysNum, vPolysNum, vertices, triangles, normals) {
     // Для кожного вертекса обчислюємо нормаль
