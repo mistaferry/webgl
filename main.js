@@ -62,14 +62,6 @@ function draw() {
     // Pass the light position to the shader
     gl.uniform3fv(shProgram.iLightPos, lightPos);
 
-    // console.log("Animation frame rendered");
-
-
-    let viewPos = [0.0, 0.0, 1.0];  // Example: Camera placed 5 units away along the Z-axis
-    // Pass the view position to the shader
-    gl.uniform3fv(shProgram.iViewPos, viewPos);
-
-
     /* Set the values of the projection transformation */
     let projection = m4.perspective(Math.PI/8, 1, 8, 12); 
     
@@ -92,19 +84,8 @@ function draw() {
     
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjectionMatrix);
 
-    gl.uniform3fv(shProgram.iAmbientColor, ambientColor);
-    gl.uniform3fv(shProgram.iDiffuseColor, diffuseColor);
-    gl.uniform3fv(shProgram.iSpecularColor, specularColor);
-    gl.uniform1f(shProgram.iShininess, shininess);
-
     surface.Draw();
 }
-
-// Lighting and material properties
-let ambientColor = [0.2, 0.2, 0.2];  // Dim light color
-let diffuseColor = [0.8, 0.0, 0.0];  // Red surface color
-let specularColor = [1.0, 1.0, 1.0]; // White specular highlight color
-let shininess = 32.0;  // Shininess factor for specular highlights
 
 
 /* Initialize the WebGL context. Called from init() */
@@ -118,14 +99,7 @@ function initGL() {
     shProgram.iAttribNormal              = gl.getAttribLocation(prog, "normal");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
-
-    // In your initGL() function, after creating the shader program:
-    shProgram.iAmbientColor = gl.getUniformLocation(prog, "ambientColor");
-    shProgram.iDiffuseColor = gl.getUniformLocation(prog, "diffuseColor");
-    shProgram.iSpecularColor = gl.getUniformLocation(prog, "specularColor");
-    shProgram.iShininess = gl.getUniformLocation(prog, "shininess");
     shProgram.iLightPos = gl.getUniformLocation(prog, "lightPos");
-    shProgram.iViewPos = gl.getUniformLocation(prog, "viewPos");
 
     let data = {};
     
