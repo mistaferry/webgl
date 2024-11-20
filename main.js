@@ -28,8 +28,8 @@ function ShaderProgram(name, program) {
 
 // Variables for light motion
 let radius = 5.0; // Radius of the circular path
-let lightHeight = 30.0; // Height of the light above the surface
-let angle = 80.0; // Initial angle
+let lightHeight = 5.0; // Height of the light above the surface
+let angle = 0.0; // Initial angle
 let speed = 0.01; // Speed of the light's circular motion
 
 function updateLightPosition() {
@@ -130,6 +130,7 @@ function initGL() {
     shProgram.iShininess = gl.getUniformLocation(prog, "shininess");
     shProgram.iLightPos = gl.getUniformLocation(prog, "lightPos");
     shProgram.iViewPos = gl.getUniformLocation(prog, "viewPos");
+
 
     let data = {};
     
