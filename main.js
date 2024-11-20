@@ -15,7 +15,7 @@ function ShaderProgram(name, program) {
     // Location of the attribute variable in the shader program.
     this.iAttribVertex = -1;
     this.iAttribNormal = -1;
-    
+
     // Location of the uniform specifying a color for the primitive.
     this.iColor = -1;
     // Location of the uniform matrix representing the combined transformation.
@@ -27,10 +27,10 @@ function ShaderProgram(name, program) {
 }
 
 // Variables for light motion
-let radius = 5.0; // Radius of the circular path
-let lightHeight = 5.0; // Height of the light above the surface
+let radius = 2.0; // Radius of the circular path
+let lightHeight = 0.1; // Height of the light above the surface
 let angle = 0.0; // Initial angle
-let speed = 0.01; // Speed of the light's circular motion
+let speed = 0.05; // Speed of the light's circular motion
 
 function updateLightPosition() {
     // Update the angle for the circular motion
@@ -39,12 +39,9 @@ function updateLightPosition() {
         angle -= 2 * Math.PI; // Keep the angle within [0, 2π]
     }
 
-    // Calculate the new light position in the circular path
     let x = radius * Math.cos(angle);
     let z = radius * Math.sin(angle);
     let y = lightHeight; // Keep the light at a fixed height
-
-    // console.log(x, y,z)
 
     // Return the updated light position as a vector
     return [x, y, z];
@@ -59,7 +56,6 @@ function draw() {
     gl.clearColor(0,0,0,1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
-
     // Update the light position in a circular motion
     let lightPos = updateLightPosition();
 
@@ -69,7 +65,7 @@ function draw() {
     // console.log("Animation frame rendered");
 
 
-    let viewPos = [0.0, 0.0, 5.0];  // Example: Camera placed 5 units away along the Z-axis
+    let viewPos = [0.0, 0.0, 1.0];  // Example: Camera placed 5 units away along the Z-axis
     // Pass the view position to the shader
     gl.uniform3fv(shProgram.iViewPos, viewPos);
 
@@ -83,19 +79,19 @@ function draw() {
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
     let translateToPointZero = m4.translation(0,0,-10);
 
-    let matAccum0 = m4.multiply(rotateToPointZero, modelView );
-    let matAccum1 = m4.multiply(translateToPointZero, matAccum0 );
+    let matAccum0 = m4.multiply(rotateToPointZero, modelView);
+    let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
         
     /* Multiply the projection matrix times the modelview matrix to give the
        combined transformation matrix, and send that to the shader program. */
-    let modelViewProjection = m4.multiply(projection, matAccum1 );
+    let modelViewProjectionMatrix = m4.multiply(projection, matAccum1);
 
-    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
     
     /* Draw the six faces of a cube, with different colors. */
-    gl.uniform4fv(shProgram.iColor, [1,1,0,1] );
-
+    gl.uniform4fv(shProgram.iColor, [1.0, 0.0, 0.0, 1.0]); // Example: red color
     
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjectionMatrix);
+
     gl.uniform3fv(shProgram.iAmbientColor, ambientColor);
     gl.uniform3fv(shProgram.iDiffuseColor, diffuseColor);
     gl.uniform3fv(shProgram.iSpecularColor, specularColor);
@@ -130,7 +126,6 @@ function initGL() {
     shProgram.iShininess = gl.getUniformLocation(prog, "shininess");
     shProgram.iLightPos = gl.getUniformLocation(prog, "lightPos");
     shProgram.iViewPos = gl.getUniformLocation(prog, "viewPos");
-
 
     let data = {};
     
