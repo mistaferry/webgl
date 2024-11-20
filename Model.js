@@ -61,10 +61,9 @@ function CreateSurfaceData(data) {
     let allTriangles = [];
     let allNormals = [];
 
-    // Surface parameters
-   let uPolysNum = 30;
-    let vPolysNum = 30;
-    let a = 1, n = 1, m = 1, b = 1, q = 0;
+    let uPolysNum = document.getElementById("u").value;
+    let vPolysNum = document.getElementById("v").value;
+    let a = 1, n = 1, m = 2, b = 1, q = 0;
 
     // Surface vertex data generation
     let originalVertices = CreateVertexData(uPolysNum, vPolysNum, m, b, n, q, a);

@@ -5,6 +5,7 @@ let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 
+document.getElementById("draw").addEventListener("click", redraw);
 
 // Constructor
 function ShaderProgram(name, program) {
@@ -21,6 +22,8 @@ function ShaderProgram(name, program) {
     // Location of the uniform matrix representing the combined transformation.
     this.iModelViewProjectionMatrix = -1;
 
+    this.iLightPos = -1;
+
     this.Use = function() {
         gl.useProgram(this.prog);
     }
@@ -34,7 +37,7 @@ let speed = 0.05; // Speed of the light's circular motion
 
 function updateLightPosition() {
     // Update the angle for the circular motion
-    angle += speed;
+    angle += 0.05;
     if (angle > 2 * Math.PI) {
         angle -= 2 * Math.PI; // Keep the angle within [0, 2π]
     }
@@ -162,21 +165,46 @@ function init() {
         return;
     }
     try {
-        initGL();  // initialize the WebGL graphics context
+        initGL(); 
+        spaceball = new TrackballRotator(canvas, draw, 0);
+        if (!animationId) {
+            animate();
+        }
     }
     catch (e) {
         document.getElementById("canvas-holder").innerHTML =
             "<p>Sorry, could not initialize the WebGL graphics context: " + e + "</p>";
         return;
     }
-
-    spaceball = new TrackballRotator(canvas, draw, 0);
-
-    // draw();
-    animate();
+    
 }
 
+let animationId = null;
+
 function animate() {
-    draw(); // Render the scene
-    requestAnimationFrame(animate); // Schedule the next frame
+    draw();
+    animationId = requestAnimationFrame(animate);
+}
+
+function redraw() {
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    if (surface) {
+        gl.deleteBuffer(surface.vertexBuffer);
+        gl.deleteBuffer(surface.normalBuffer);
+    }
+
+    if (shProgram) {
+        gl.deleteProgram(shProgram.prog);
+    }
+
+    // Reset variables
+    surface = null;
+    shProgram = null;
+
+    init()
 }
