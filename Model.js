@@ -2,10 +2,10 @@ function deg2rad(angle) {
     return angle * Math.PI / 180;
 }
 
-
-function Vertex(p)
+function Vertex(p, t)
 {
     this.p = p;
+    this.t = t;
     this.normal = [];
     this.triangles = [];
 }
@@ -25,9 +25,15 @@ function Model(name) {
     this.iVertexBuffer = gl.createBuffer();
     this.iIndexBuffer = gl.createBuffer();
     this.iNormalBuffer = gl.createBuffer();
+    this.iTextureBuffer = gl.createBuffer();
     this.count = 0;
 
-    this.BufferData = function(vertices, indices, normals) {
+    // Identifier of a diffuse texture
+    this.iTextureDiffuse  = -1;
+    this.iTextureSpecular = -1;
+    this.iTextureNormal = -1;
+
+    this.BufferData = function(vertices, indices, normals, textCoord) {
         // Vertex buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
@@ -40,10 +46,24 @@ function Model(name) {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.iIndexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
     
+        // Texture buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, textCoord, gl.STATIC_DRAW);
+
         this.count = indices.length;
     }
     
     this.Draw = function() {
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.iTextureDiffuse);
+
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, this.iTextureSpecular);
+
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, this.iTextureNormal);
+
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
@@ -51,6 +71,10 @@ function Model(name) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
         gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribNormal);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribTextureCoord, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribTextureCoord);
     
         gl.drawElements(gl.TRIANGLES, this.count, gl.UNSIGNED_SHORT, 0);
     }
@@ -78,12 +102,18 @@ function CreateSurfaceData(data) {
 }
 
 function prepareRenderData(data, renderVertices, allTriangles, facetNormals){
+    // Populate texture buffer
+    data.textCoordF32 = new Float32Array(renderVertices.length * 2);
+
     // Populate vertex buffer
     data.verticesF32 = new Float32Array(renderVertices.length * 3);
     for (let i = 0, len = renderVertices.length; i < len; i++) {
         data.verticesF32[i * 3 + 0] = renderVertices[i].p[0];
         data.verticesF32[i * 3 + 1] = renderVertices[i].p[1];
         data.verticesF32[i * 3 + 2] = renderVertices[i].p[2];
+
+        data.textCoordF32[i * 2 + 0] = renderVertices[i].t[0];
+        data.textCoordF32[i * 2 + 1] = renderVertices[i].t[1];
     }
 
     //Populate index buffer
@@ -154,7 +184,7 @@ function addTriangleToVertices(triangle, normal, vertices) {
 }
 
 function addTriangleVertex(vertex, normal, renderVertices) {
-    let newVertex = new Vertex([...vertex.p]);
+    let newVertex = new Vertex([...vertex.p], [...vertex.t]);
     newVertex.normal = normal;
     renderVertices.push(newVertex);
     return renderVertices.length - 1;
@@ -185,10 +215,13 @@ function CreateVertexData(uPolysNum, vPolysNum) {
 }
 
 function surfaceEquation(u, v){
+    let uNorm = u / (2 * Math.PI);
+    let vNorm = v / b;
+
     let x = v * Math.cos(u);
     let y = v * Math.sin(u);
     let z = a * Math.exp(-n * v) * Math.sin(w * v + q);
-    return new Vertex([x, y, z])
+    return new Vertex([x, y, z], [uNorm, vNorm]);
 }
 
 function calculateAverageFacetNormal(originalVertices){

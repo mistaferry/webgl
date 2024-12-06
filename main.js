@@ -16,6 +16,7 @@ function ShaderProgram(name, program) {
     // Location of the attribute variable in the shader program.
     this.iAttribVertex = -1;
     this.iAttribNormal = -1;
+    this.iAttribTextureCoord = -1;
 
     // Location of the uniform specifying a color for the primitive.
     this.iColor = -1;
@@ -109,7 +110,11 @@ function initGL() {
     CreateSurfaceData(data)
 
     surface = new Model('Surface');
-    surface.BufferData(data.verticesF32, data.indicesU16, data.normalsF32);
+    surface.BufferData(data.verticesF32, data.indicesU16, data.normalsF32, data.textCoordF32);
+
+    surface.iTextureDiffuse  = LoadTexture("https://webglfundamentals.org/webgl/resources/f-texture.png");
+    surface.iTextureSpecular = LoadTexture("https://webglfundamentals.org/webgl/resources/keyboard.jpg");
+    surface.iTextureNormal = LoadTexture("https://texturelabs.org/wp-content/uploads/Texturelabs_Grunge_264thumbnail.jpg");
 
     gl.enable(gl.DEPTH_TEST);
 }
