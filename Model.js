@@ -56,17 +56,21 @@ function Model(name) {
     }
 }
 
+let a = 1, n = 1, m = 2, b = 1, q = 0;
+let w = (m * Math.PI) / b;
+let uPolysNum = 0;
+let vPolysNum = 0;
+
 function CreateSurfaceData(data) {
     let renderVertices = [];
     let allTriangles = [];
     let facetNormals = [];
 
-    let uPolysNum = document.getElementById("u").value;
-    let vPolysNum = document.getElementById("v").value;
-    let a = 1, n = 1, m = 2, b = 1, q = 0;
+    uPolysNum = document.getElementById("u").value;
+    vPolysNum = document.getElementById("v").value;
 
     // Surface vertex data generation
-    let originalVertices = CreateVertexData(uPolysNum, vPolysNum, m, b, n, q, a);
+    let originalVertices = CreateVertexData(uPolysNum, vPolysNum);
     
     processData(vPolysNum, uPolysNum, allTriangles, originalVertices, renderVertices, facetNormals);
 
@@ -100,6 +104,8 @@ function prepareRenderData(data, renderVertices, allTriangles, facetNormals){
 }
 
 function processData(vPolysNum, uPolysNum, triangles, originalVertices, renderVertices, facetNormals) {
+    calculateAverageFacetNormal(originalVertices);
+
     for (let lineIndex = 1; lineIndex < vPolysNum; lineIndex++) {
         let currentLineOffset = lineIndex * uPolysNum;
         let previousLineOffset = (lineIndex - 1) * uPolysNum;
@@ -117,7 +123,7 @@ function processData(vPolysNum, uPolysNum, triangles, originalVertices, renderVe
             createTriangle(v2ind, v1ind, v0ind, originalVertices, renderVertices, triangles, facetNormals);
         }
     }
-    // calculateAverageFacetNormal(originalVertices, allTriangles, averageNormals, facetNormals, renderVertices);
+    
 }
 
 function createTriangle(v0ind, v1ind, v2ind, originalVertices, renderVertices, triangles, facetNormals){
@@ -125,8 +131,8 @@ function createTriangle(v0ind, v1ind, v2ind, originalVertices, renderVertices, t
     let v1 = originalVertices[v1ind];
     let v2 = originalVertices[v2ind];
 
-    // Adding a normal
-    let normal = calculateNormal(v0, v1, v2);
+    // Adding a normal.
+    let normal = v1.normal[0];
     facetNormals.push(normal, normal, normal);
 
     // Adding a triangle
@@ -162,46 +168,65 @@ function calculateNormal(v0, v1, v2) {
 }
 
 
-function CreateVertexData(uPolysNum, vPolysNum, m, b, n, q, a) {
+function CreateVertexData(uPolysNum, vPolysNum) {
     let allPolylines = []; 
-
-    let w = (m * Math.PI) / b;
+    let stepU = 2 * Math.PI / uPolysNum;
+    let stepV = b / vPolysNum;
     for (let i=0; i<vPolysNum; i++) {
-        let v = (i * b) / vPolysNum;
-        for (let j=0; j<uPolysNum; j++) {
-            let u = (j * 2 * Math.PI) / uPolysNum;
-            let x = v * Math.cos(u);
-            let y = v * Math.sin(u);
-            let z = a * Math.exp(-n * v) * Math.sin(w * v + q);
-            allPolylines.push(new Vertex([x, y, z]));
+        let v = i * stepV;  // Поточне значення v
+        for (let j = 0; j < uPolysNum; j++) {
+            let u = j * stepU;  // Поточне значення u
+            let vertex = surfaceEquation(u,v);
+            allPolylines.push(vertex);
         }
     }
 
     return allPolylines;
 }
 
-function calculateAverageFacetNormal(originalVertices, allTriangles, averageNormals, facetNormals, renderVertices){
-    for (let i = 300; i < originalVertices.length; i++) {
-        let currV = originalVertices[i];
-        let vTriangles = currV.triangles;
-        let averageNormal = new Vertex([0, 0, 0]);
+function surfaceEquation(u, v){
+    let x = v * Math.cos(u);
+    let y = v * Math.sin(u);
+    let z = a * Math.exp(-n * v) * Math.sin(w * v + q);
+    return new Vertex([x, y, z])
+}
 
-        // Sum all triangle normals
-        for (let j = 0; j < vTriangles.length; j++) {
-            let normal = facetNormals[vTriangles[j]];
+function calculateAverageFacetNormal(originalVertices){
+    let stepU = 2 * Math.PI / uPolysNum;
+    let stepV = b / vPolysNum;
+    let count = 0;
+    for (let i=0; i<vPolysNum; i++) {
+        for (let j = 0; j < uPolysNum; j++) {
+            let normals = []
+            let currV = surfaceEquation(j * stepU, i * stepV);
+            let v1 = surfaceEquation((j+1) * stepU, i * stepV);
+            let v2 = surfaceEquation(j * stepU, (i+1) * stepV);
+            let v3 = surfaceEquation((j-1) * stepU, (i-1) * stepV);
+            let v4 = surfaceEquation((j-1) * stepU, i * stepV);
+            let v5 = surfaceEquation(j * stepU, (i-1) * stepV);
+            let v6 = surfaceEquation((j+1) * stepU, (i-1) * stepV);
 
-            averageNormal.p[0] += normal[0];
-            averageNormal.p[1] += normal[1];
-            averageNormal.p[2] += normal[2];
+            normals.push(calculateNormal(v2, v1, currV));
+            normals.push(calculateNormal(v2, currV, v3));
+            normals.push(calculateNormal(v3, currV, v4));
+            normals.push(calculateNormal(currV, v5, v4));
+            normals.push(calculateNormal(currV, v6, v5));
+            normals.push(calculateNormal(v1, v6, currV));
+
+            let average = [0, 0, 0];
+            for (let normal of normals) {
+                average[0] += normal[0];
+                average[1] += normal[1];
+                average[2] += normal[2];
+            }
+
+            average[0] /= normals.length;
+            average[1] /= normals.length;
+            average[2] /= normals.length;
+            average = m4.normalize(average);
+
+            originalVertices[count].normal.push(average);
+            count++;
         }
-    
-        // Divide by the number of triangles to get the average
-        averageNormal.p[0] /= vTriangles.length;
-        averageNormal.p[1] /= vTriangles.length;
-        averageNormal.p[2] /= vTriangles.length;
-
-        averageNormal = m4.normalize(averageNormal);
-        averageNormals.push(averageNormal, averageNormal, averageNormal)
-
     }
 }
