@@ -13,58 +13,47 @@ function ShaderProgram(name, program) {
     this.name = name;
     this.prog = program;
 
-    // Location of the attribute variable in the shader program.
     this.iAttribVertex = -1;
     this.iAttribNormal = -1;
     this.iAttribTextureCoord = -1;
-
-    // Location of the uniform specifying a color for the primitive.
-    this.iColor = -1;
-    // Location of the uniform matrix representing the combined transformation.
     this.iModelViewProjectionMatrix = -1;
-
+    this.iModelViewMatrix  = -1;
+    this.iColor = -1;
     this.iLightPos = -1;
+    this.iViewPos = -1;
 
     this.Use = function() {
         gl.useProgram(this.prog);
     }
 }
 
-// Variables for light motion
-let radius = 2.0; // Radius of the circular path
-let lightHeight = 0.1; // Height of the light above the surface
-let angle = 0.0; // Initial angle
-let speed = 0.05; // Speed of the light's circular motion
+let radius = 20.0;
+let lightHeight = 5;
+let angle = 0.0;
 
 function updateLightPosition() {
-    // Update the angle for the circular motion
     angle += 0.05;
     if (angle > 2 * Math.PI) {
-        angle -= 2 * Math.PI; // Keep the angle within [0, 2π]
+        angle -= 2 * Math.PI;
     }
 
     let x = radius * Math.cos(angle);
-    let z = radius * Math.sin(angle);
-    let y = lightHeight; // Keep the light at a fixed height
+    let y = radius * Math.sin(angle);
+    let z = lightHeight;
 
-    // Return the updated light position as a vector
     return [x, y, z];
 }
-
 
 /* Draws a colored cube, along with a set of coordinate axes.
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
 function draw() { 
-    gl.clearColor(0,0,0,1);
+    gl.clearColor(0, 0.2, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
     // Update the light position in a circular motion
-    let lightPos = updateLightPosition();
-
-    // Pass the light position to the shader
-    gl.uniform3fv(shProgram.iLightPos, lightPos);
+    const lightPos = updateLightPosition();
 
     /* Set the values of the projection transformation */
     let projection = m4.perspective(Math.PI/8, 1, 8, 12); 
@@ -82,11 +71,11 @@ function draw() {
        combined transformation matrix, and send that to the shader program. */
     let modelViewProjectionMatrix = m4.multiply(projection, matAccum1);
 
-    
-    /* Draw the six faces of a cube, with different colors. */
-    gl.uniform4fv(shProgram.iColor, [1.0, 0.0, 0.0, 1.0]); // Example: red color
-    
+    gl.uniform3fv(shProgram.iLightPos, lightPos);
+    gl.uniform4fv(shProgram.iColor, [1.0, 0.0, 0.0, 1.0]);
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjectionMatrix);
+    gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccum1);
+    gl.uniform3fv(shProgram.iViewPos, [0.0, 0.0, 1.0]);
 
     surface.Draw();
 }
@@ -101,9 +90,12 @@ function initGL() {
 
     shProgram.iAttribVertex              = gl.getAttribLocation(prog, "vertex");
     shProgram.iAttribNormal              = gl.getAttribLocation(prog, "normal");
+    shProgram.iAttribTextureCoord        = gl.getAttribLocation(prog, "texCoord");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
+    shProgram.iModelViewMatrix           = gl.getUniformLocation(prog, "ModelViewMatrix");
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
-    shProgram.iLightPos = gl.getUniformLocation(prog, "lightPos");
+    shProgram.iLightPos                  = gl.getUniformLocation(prog, "lightPos");
+    shProgram.iViewPos                   = gl.getUniformLocation(prog, "viewPos");
 
     let data = {};
     
@@ -112,9 +104,9 @@ function initGL() {
     surface = new Model('Surface');
     surface.BufferData(data.verticesF32, data.indicesU16, data.normalsF32, data.textCoordF32);
 
-    surface.iTextureDiffuse  = LoadTexture("https://webglfundamentals.org/webgl/resources/f-texture.png");
-    surface.iTextureSpecular = LoadTexture("https://webglfundamentals.org/webgl/resources/keyboard.jpg");
-    surface.iTextureNormal = LoadTexture("https://texturelabs.org/wp-content/uploads/Texturelabs_Grunge_264thumbnail.jpg");
+    surface.iTextureDiffuse  = LoadTexture('textures/diffuse.jpg');
+    surface.iTextureSpecular = LoadTexture('textures/specular.png');
+    surface.iTextureNormal = LoadTexture('textures/normal.png');
 
     gl.enable(gl.DEPTH_TEST);
 }

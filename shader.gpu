@@ -1,18 +1,31 @@
 // Vertex shader
-
 const vertexShaderSource = `
 attribute vec3 vertex;
 attribute vec3 normal;
-varying vec3 fragVertex;
-varying vec3 fragNormal;
+attribute vec2 texCoord;
+
+uniform mat4 ModelViewMatrix;
 uniform mat4 ModelViewProjectionMatrix;
 
+varying vec3 fragVertex;
+varying vec2 fragTexCoord;
+varying mat3 TBN;
+
 void main() {
-    fragVertex = vertex;
-    fragNormal = normal;
+    vec3 normalizedNormal = normalize(mat3(ModelViewMatrix) * normal);
+    
+    // Ініціалізація тангенса (орієнтація поверхні в текстурних координатах)
+    vec3 tangent = vec3(1.0, 0.0, 0.0);
+    tangent = normalize(tangent - dot(tangent, normalizedNormal) * normalizedNormal); // Ортогоналізація тангенса відносно нормалі
+    vec3 bitangent = cross(tangent, normalizedNormal);
+    // Формування матриці TBNру
+    TBN = mat3(tangent, bitangent, normalizedNormal);
+
+    fragVertex = (ModelViewMatrix * vec4(vertex, 1.0)).xyz;
+    fragTexCoord = texCoord;
+
     gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
 }`;
-
 
 
 // Fragment shader
@@ -24,22 +37,36 @@ const fragmentShaderSource = `
 #endif
 
 varying vec3 fragVertex;
-varying vec3 fragNormal;
+varying vec2 fragTexCoord;
+varying mat3 TBN;
+
 uniform vec3 lightPos;
+uniform vec3 viewPos;
+uniform sampler2D diffuseTexture;
+uniform sampler2D specularTexture;
+uniform sampler2D normalMap;
 
 void main() {
-    vec3 ambientColor = vec3(0.2, 0.2, 0.2); // Fixed inline initialization
-    vec3 diffuseColor = vec3(0.8, 0.0, 0.0); // Renamed for clarity
-    vec3 specularColor = vec3(1.0, 1.0, 1.0); // Renamed for clarity
-    float shininess = 32.0;
-    vec3 viewPos = vec3(0.0, 0.0, 1.0); // Fixed inline initialization
+    // Обчислення нормалі з текстури
+    vec3 textureNormal = texture2D(normalMap, fragTexCoord).xyz;
+    textureNormal = 2.0 * textureNormal - vec3(1.0, 1.0, 1.0);
+    // Трансформація текстурної нормалі у світові координати за допомогою TBN
+    vec3 adjustedNormal = normalize(TBN * textureNormal);
+    
+    // Освітлення
+    vec3 ambientColor = vec3(0.2, 0.2, 0.2);
+    vec3 diffuseColor = texture2D(diffuseTexture, fragTexCoord).rgb;
+    vec3 specularColor = texture2D(specularTexture, fragTexCoord).rgb;
+    float shininess = 10.0;
 
+    // Розрахунок дифузного освітлення
     vec3 lightDir = normalize(lightPos - fragVertex);
-    float diff = max(dot(fragNormal, lightDir), 0.0);
+    float diff = max(dot(adjustedNormal, lightDir), 0.0);
     vec3 diffuse = diffuseColor * diff;
 
+    // Розрахунок дзеркального освітлення
     vec3 viewDir = normalize(viewPos - fragVertex);
-    vec3 reflectDir = reflect(-lightDir, fragNormal);
+    vec3 reflectDir = reflect(-lightDir, adjustedNormal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
     vec3 specular = specularColor * spec;
 

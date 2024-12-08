@@ -38,7 +38,7 @@ function Model(name) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
     
-        // Normal buffer (if using)
+        // Normal buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW); 
     
@@ -56,13 +56,16 @@ function Model(name) {
     this.Draw = function() {
 
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, this.iTextureDiffuse);
+        gl.bindTexture(gl.TEXTURE_2D, surface.iTextureDiffuse);
+        gl.uniform1i(shProgram.iTextureDiffuse, 0); 
 
         gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, this.iTextureSpecular);
+        gl.bindTexture(gl.TEXTURE_2D, surface.iTextureSpecular);
+        gl.uniform1i(shProgram.iTextureSpecular, 1);
 
-        gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D, this.iTextureNormal);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, surface.iTextureNormal);
+        gl.uniform1i(shProgram.iTextureNormal, 2);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
@@ -73,7 +76,7 @@ function Model(name) {
         gl.enableVertexAttribArray(shProgram.iAttribNormal);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
-        gl.vertexAttribPointer(shProgram.iAttribTextureCoord, 3, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(shProgram.iAttribTextureCoord, 2, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribTextureCoord);
     
         gl.drawElements(gl.TRIANGLES, this.count, gl.UNSIGNED_SHORT, 0);
