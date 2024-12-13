@@ -6,8 +6,9 @@ let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 let sphere;
 
-let startScalePoint = [10,4]
+let startScalePoint = [0,0]
 let textureScale = 0;
+let center = [0, 0, 0];
 
 let sphereRadius = 0.1; // Радіус сфери
 let latitudeBands = 30; // Кількість сегментів по широті
@@ -60,6 +61,8 @@ function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
     textureScale = document.getElementById("scaleSlider").value;
+    let cVertex = surfaceEquation(startScalePoint[0], startScalePoint[1]);
+    center = [cVertex.p[0], cVertex.p[1], cVertex.p[2]]
 
     // Update the light position in a circular motion
     const lightPos = updateLightPosition();
@@ -133,7 +136,7 @@ function initGL() {
     surface.iTextureNormal = LoadTexture('textures/normal.png');
 
     sphere = new Model('Sphere');
-    let sphereVertices = generateSphere(sphereRadius, latitudeBands, longitudeBands);
+    let sphereVertices = generateSphere(center, sphereRadius, latitudeBands, longitudeBands);
     sphere.PointBufferData(sphereVertices);
 
     gl.enable(gl.DEPTH_TEST);
@@ -207,25 +210,43 @@ function init() {
 let animationId = null;
 
 function animate() {
+    let sphereVertices = generateSphere(center, sphereRadius, latitudeBands, longitudeBands);
+    sphere.PointBufferData(sphereVertices);
     draw();
-    animationId = requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
 }
 
+
 document.addEventListener("keydown", (event) => {
-    const step = 0.01; // Крок переміщення (менший для текстурних координат)
+    let uMax = (uPolysNum - 1) * stepU;
+    let vMax = (vPolysNum - 1) * stepV;
+    const step = 0.01;
+    
     switch (event.key) {
         case "w":
-            startScalePoint[1] += step; // Рух вгору
+            startScalePoint[1] += step;
+            if (startScalePoint[1] > vMax) {
+                startScalePoint[1] = vMax;
+            }
             break;
         case "s":
-            startScalePoint[1] -= step; // Рух вниз
+            startScalePoint[1] -= step;
+            if (startScalePoint[1] < 0) {
+                startScalePoint[1] = 0;
+            }
             break;
         case "a":
-            startScalePoint[0] -= step; // Рух вліво
+            startScalePoint[0] -= step;
+            if (startScalePoint[0] < 0) {
+                startScalePoint[0] = 0;
+            }
             break;
         case "d":
-            startScalePoint[0] += step; // Рух вправо
+            startScalePoint[0] += step;
+            if (startScalePoint[0] > uMax) {
+                startScalePoint[0] = uMax;
+            }
             break;
     }
-    draw();
+    draw();    
 });
