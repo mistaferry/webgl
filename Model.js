@@ -100,8 +100,10 @@ function Model(name) {
 
 let a = 1, n = 1, m = 2, b = 1, q = 0;
 let w = (m * Math.PI) / b;
-let uPolysNum = 30;
+let uPolysNum = 300;
 let vPolysNum = 30;
+let stepU = 2 * Math.PI / uPolysNum;
+let stepV = b / vPolysNum;
 
 function CreateSurfaceData(data) {
     let renderVertices = [];
@@ -214,9 +216,7 @@ function calculateNormal(v0, v1, v2) {
 
 
 function CreateVertexData(uPolysNum, vPolysNum) {
-    let allPolylines = []; 
-    let stepU = 2 * Math.PI / uPolysNum;
-    let stepV = b / vPolysNum;
+    let allPolylines = [];
     for (let i=0; i<vPolysNum; i++) {
         let v = i * stepV;  // Поточне значення v
         for (let j = 0; j < uPolysNum; j++) {
@@ -229,6 +229,7 @@ function CreateVertexData(uPolysNum, vPolysNum) {
     return allPolylines;
 }
 
+
 function surfaceEquation(u, v){
     let uNorm = u / (2 * Math.PI);
     let vNorm = v / b;
@@ -240,8 +241,6 @@ function surfaceEquation(u, v){
 }
 
 function calculateAverageFacetNormal(originalVertices){
-    let stepU = 2 * Math.PI / uPolysNum;
-    let stepV = b / vPolysNum;
     let count = 0;
     for (let i=0; i<vPolysNum; i++) {
         for (let j = 0; j < uPolysNum; j++) {
@@ -280,7 +279,7 @@ function calculateAverageFacetNormal(originalVertices){
 }
 
 
-function generateSphere(radius, latitudeBands, longitudeBands) {
+function generateSphere(center, radius, latitudeBands, longitudeBands) {
     const vertices = [];
 
     for (let lat = 0; lat <= latitudeBands; lat++) {
@@ -297,7 +296,7 @@ function generateSphere(radius, latitudeBands, longitudeBands) {
             const y = cosTheta;
             const z = sinPhi * sinTheta;
 
-            vertices.push(radius * x, radius * y, radius * z);
+            vertices.push(radius * x + center[0], radius * y + center[1], radius * z + center[2]);
         }
     }
 

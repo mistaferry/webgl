@@ -6,8 +6,8 @@ let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 let sphere;
 
-let startScalePoint = [0,0]
-let textureScale = 0;
+let startScalePoint = [0.5,0.5]
+let textureScale = 1.0;
 let center = [0, 0, 0];
 
 let sphereRadius = 0.1; // Радіус сфери
@@ -28,7 +28,8 @@ function ShaderProgram(name, program) {
     this.iColor = -1;
     this.iLightPos = -1;
     this.iViewPos = -1;
-    this.startScalePoint = -1;
+    this.iStartScalePoint = -1;
+    this.iTextureScale = -1;
 
     this.Use = function() {
         gl.useProgram(this.prog);
@@ -62,7 +63,7 @@ function draw() {
     
     textureScale = document.getElementById("scaleSlider").value;
     let cVertex = surfaceEquation(startScalePoint[0], startScalePoint[1]);
-    center = [cVertex.p[0], cVertex.p[1], cVertex.p[2]]
+    center = [cVertex.p[0], cVertex.p[1], cVertex.p[2]];
 
     // Update the light position in a circular motion
     const lightPos = updateLightPosition();
@@ -94,15 +95,19 @@ function draw() {
     // gl.uniform3fv(shProgram.iViewPos, [0.0, 0.0, 1.0]);
     // gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjectionMatrix);
     // gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccum1);
-    gl.uniform3fv(shProgram.iStartScalePoint, startScalePoint);
+    
+    gl.uniform2f(shProgram.iStartScalePoint, map(startScalePoint[0], 0, Math.PI * 2, 0, 1), map(startScalePoint[1], 0, b, 0, 1));
     gl.uniform1f(shProgram.iTextureScale, textureScale);
-
     gl.uniform1i(shProgram.hasTexture, false);
     sphere.DisplayPoint();
 
     gl.uniform1i(shProgram.hasTexture, true); 
 }
 
+function map(value, a, b, c, d) {
+    value = (value - a) / (b - a);
+    return c + value * (d - c);
+}
 
 
 /* Initialize the WebGL context. Called from init() */
@@ -131,9 +136,9 @@ function initGL() {
     surface = new Model('Surface');
     surface.BufferData(data.verticesF32, data.indicesU16, data.normalsF32, data.textCoordF32);
 
-    surface.iTextureDiffuse  = LoadTexture('textures/diffuse.jpg');
-    surface.iTextureSpecular = LoadTexture('textures/specular.png');
-    surface.iTextureNormal = LoadTexture('textures/normal.png');
+    surface.iTextureDiffuse  = LoadTexture('textures/diffuse1.jpg');
+    surface.iTextureSpecular = LoadTexture('textures/specular1.png');
+    surface.iTextureNormal = LoadTexture('textures/normal1.png');
 
     sphere = new Model('Sphere');
     let sphereVertices = generateSphere(center, sphereRadius, latitudeBands, longitudeBands);
