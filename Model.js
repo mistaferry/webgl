@@ -81,20 +81,32 @@ function Model(name) {
     
         gl.drawElements(gl.TRIANGLES, this.count, gl.UNSIGNED_SHORT, 0);
     }
+
+    this.DisplayPoint = function () {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribVertex);
+        gl.drawArrays(gl.LINE_STRIP, 0, this.count);
+    }
+
+    this.PointBufferData = function (vertices) {
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+
+        this.count = vertices.length / 3;
+    }
 }
 
 let a = 1, n = 1, m = 2, b = 1, q = 0;
 let w = (m * Math.PI) / b;
-let uPolysNum = 0;
-let vPolysNum = 0;
+let uPolysNum = 30;
+let vPolysNum = 30;
 
 function CreateSurfaceData(data) {
     let renderVertices = [];
     let allTriangles = [];
     let facetNormals = [];
-
-    uPolysNum = document.getElementById("u").value;
-    vPolysNum = document.getElementById("v").value;
 
     // Surface vertex data generation
     let originalVertices = CreateVertexData(uPolysNum, vPolysNum);
@@ -265,4 +277,29 @@ function calculateAverageFacetNormal(originalVertices){
             count++;
         }
     }
+}
+
+
+function generateSphere(radius, latitudeBands, longitudeBands) {
+    const vertices = [];
+
+    for (let lat = 0; lat <= latitudeBands; lat++) {
+        const theta = lat * Math.PI / latitudeBands;
+        const sinTheta = Math.sin(theta);
+        const cosTheta = Math.cos(theta);
+
+        for (let lon = 0; lon <= longitudeBands; lon++) {
+            const phi = lon * 2 * Math.PI / longitudeBands;
+            const sinPhi = Math.sin(phi);
+            const cosPhi = Math.cos(phi);
+
+            const x = cosPhi * sinTheta;
+            const y = cosTheta;
+            const z = sinPhi * sinTheta;
+
+            vertices.push(radius * x, radius * y, radius * z);
+        }
+    }
+
+    return new Float32Array(vertices);
 }

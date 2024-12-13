@@ -23,16 +23,13 @@
         <p id="message" >Drag your mouse on the cube to rotate it.<br>(On a touch screen, you can use your finger.)</p>
 
         <div>
-            <p>Change values</p>
-            <label for="b">U </label>
-            <input type="slider" id="u" value="30" min="3" max="100"><br>
-            <label for="b">V </label>
-            <input type="slider" id="v" value="30" min="3" max="100"><br>
-            <button id="draw">Apply changes</button>
+            <label for="scaleSlider">Scale </label>
+            <input type="range" id="scaleSlider" value="1" min="0.05" max="1" step="0.1" onchange="updateScale()"><br>
         </div>
+        
 
         <div id="canvas-holder">
-        <canvas width="900" height="900" id="webglcanvas" style="background-color:red"></canvas>
+        <canvas width="600" height="600" id="webglcanvas" style="background-color:red"></canvas>
         </div>
 
 

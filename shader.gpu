@@ -4,6 +4,8 @@ attribute vec3 vertex;
 attribute vec3 normal;
 attribute vec2 texCoord;
 
+uniform float textureScale;
+uniform vec2 startScalePoint;
 uniform mat4 ModelViewMatrix;
 uniform mat4 ModelViewProjectionMatrix;
 
@@ -22,8 +24,13 @@ void main() {
     TBN = mat3(tangent, bitangent, normalizedNormal);
 
     fragVertex = (ModelViewMatrix * vec4(vertex, 1.0)).xyz;
-    fragTexCoord = texCoord;
 
+    // Масштабування текстурних координат
+    vec2 newScaledPoint = texCoord - startScalePoint;
+    newScaledPoint *= textureScale;
+    newScaledPoint += startScalePoint;
+    fragTexCoord = newScaledPoint;
+    
     gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
 }`;
 
@@ -45,32 +52,39 @@ uniform vec3 viewPos;
 uniform sampler2D diffuseTexture;
 uniform sampler2D specularTexture;
 uniform sampler2D normalMap;
+uniform bool hasTexture;
 
 void main() {
-    // Обчислення нормалі з текстури
-    vec3 textureNormal = texture2D(normalMap, fragTexCoord).xyz;
-    textureNormal = 2.0 * textureNormal - vec3(1.0, 1.0, 1.0);
-    // Трансформація текстурної нормалі у світові координати за допомогою TBN
-    vec3 adjustedNormal = normalize(TBN * textureNormal);
-    
-    // Освітлення
-    vec3 ambientColor = vec3(0.2, 0.2, 0.2);
-    vec3 diffuseColor = texture2D(diffuseTexture, fragTexCoord).rgb;
-    vec3 specularColor = texture2D(specularTexture, fragTexCoord).rgb;
-    float shininess = 10.0;
+    vec3 resultColor;
 
-    // Розрахунок дифузного освітлення
-    vec3 lightDir = normalize(lightPos - fragVertex);
-    float diff = max(dot(adjustedNormal, lightDir), 0.0);
-    vec3 diffuse = diffuseColor * diff;
+    if(hasTexture){
+        // Обчислення нормалі з текстури
+        vec3 textureNormal = texture2D(normalMap, fragTexCoord).xyz;
+        textureNormal = 2.0 * textureNormal - vec3(1.0, 1.0, 1.0);
+        // Трансформація текстурної нормалі у світові координати за допомогою TBN
+        vec3 adjustedNormal = normalize(TBN * textureNormal);
+        
+        // Освітлення
+        vec3 ambientColor = vec3(0.2, 0.2, 0.2);
+        vec3 diffuseColor = texture2D(diffuseTexture, fragTexCoord).rgb;
+        vec3 specularColor = texture2D(specularTexture, fragTexCoord).rgb;
+        float shininess = 10.0;
 
-    // Розрахунок дзеркального освітлення
-    vec3 viewDir = normalize(viewPos - fragVertex);
-    vec3 reflectDir = reflect(-lightDir, adjustedNormal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-    vec3 specular = specularColor * spec;
+        // Розрахунок дифузного освітлення
+        vec3 lightDir = normalize(lightPos - fragVertex);
+        float diff = max(dot(adjustedNormal, lightDir), 0.0);
+        vec3 diffuse = diffuseColor * diff;
 
-    vec3 result = ambientColor + diffuse + specular;
+        // Розрахунок дзеркального освітлення
+        vec3 viewDir = normalize(viewPos - fragVertex);
+        vec3 reflectDir = reflect(-lightDir, adjustedNormal);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+        vec3 specular = specularColor * spec;
 
-    gl_FragColor = vec4(result, 1.0);
+        resultColor = ambientColor + diffuse + specular;
+    }else{
+        resultColor = vec3(1.0, 0.0, 0.0);
+    }
+
+    gl_FragColor = vec4(resultColor, 1.0);
 }`;

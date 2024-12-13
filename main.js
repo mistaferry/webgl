@@ -4,8 +4,14 @@ let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
+let sphere;
 
-document.getElementById("draw").addEventListener("click", redraw);
+let startScalePoint = [10,4]
+let textureScale = 0;
+
+let sphereRadius = 0.1; // Радіус сфери
+let latitudeBands = 30; // Кількість сегментів по широті
+let longitudeBands = 30; // Кількість сегментів по довготі
 
 // Constructor
 function ShaderProgram(name, program) {
@@ -21,6 +27,7 @@ function ShaderProgram(name, program) {
     this.iColor = -1;
     this.iLightPos = -1;
     this.iViewPos = -1;
+    this.startScalePoint = -1;
 
     this.Use = function() {
         gl.useProgram(this.prog);
@@ -52,23 +59,22 @@ function draw() {
     gl.clearColor(0, 0.2, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
+    textureScale = document.getElementById("scaleSlider").value;
+
     // Update the light position in a circular motion
     const lightPos = updateLightPosition();
 
     /* Set the values of the projection transformation */
     let projection = m4.perspective(Math.PI/8, 1, 8, 12); 
     
-    /* Get the view matrix from the SimpleRotator object.*/
+    
     let modelView = spaceball.getViewMatrix();
-
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
     let translateToPointZero = m4.translation(0,0,-10);
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView);
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
         
-    /* Multiply the projection matrix times the modelview matrix to give the
-       combined transformation matrix, and send that to the shader program. */
     let modelViewProjectionMatrix = m4.multiply(projection, matAccum1);
 
     gl.uniform3fv(shProgram.iLightPos, lightPos);
@@ -77,8 +83,23 @@ function draw() {
     gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccum1);
     gl.uniform3fv(shProgram.iViewPos, [0.0, 0.0, 1.0]);
 
+    gl.uniform1i(shProgram.hasTexture, true);
     surface.Draw();
+
+    // gl.useProgram(shProgram.prog);
+    // gl.uniform3fv(shProgram.iLightPos, lightPos);
+    // gl.uniform3fv(shProgram.iViewPos, [0.0, 0.0, 1.0]);
+    // gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjectionMatrix);
+    // gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccum1);
+    gl.uniform3fv(shProgram.iStartScalePoint, startScalePoint);
+    gl.uniform1f(shProgram.iTextureScale, textureScale);
+
+    gl.uniform1i(shProgram.hasTexture, false);
+    sphere.DisplayPoint();
+
+    gl.uniform1i(shProgram.hasTexture, true); 
 }
+
 
 
 /* Initialize the WebGL context. Called from init() */
@@ -96,6 +117,9 @@ function initGL() {
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
     shProgram.iLightPos                  = gl.getUniformLocation(prog, "lightPos");
     shProgram.iViewPos                   = gl.getUniformLocation(prog, "viewPos");
+    shProgram.iStartScalePoint           = gl.getUniformLocation(prog, "startScalePoint")
+    shProgram.iTextureScale              = gl.getUniformLocation(prog, "textureScale")
+    shProgram.hasTexture              = gl.getUniformLocation(prog, "hasTexture")
 
     let data = {};
     
@@ -107,6 +131,10 @@ function initGL() {
     surface.iTextureDiffuse  = LoadTexture('textures/diffuse.jpg');
     surface.iTextureSpecular = LoadTexture('textures/specular.png');
     surface.iTextureNormal = LoadTexture('textures/normal.png');
+
+    sphere = new Model('Sphere');
+    let sphereVertices = generateSphere(sphereRadius, latitudeBands, longitudeBands);
+    sphere.PointBufferData(sphereVertices);
 
     gl.enable(gl.DEPTH_TEST);
 }
@@ -183,25 +211,21 @@ function animate() {
     animationId = requestAnimationFrame(animate);
 }
 
-function redraw() {
-    if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
+document.addEventListener("keydown", (event) => {
+    const step = 0.01; // Крок переміщення (менший для текстурних координат)
+    switch (event.key) {
+        case "w":
+            startScalePoint[1] += step; // Рух вгору
+            break;
+        case "s":
+            startScalePoint[1] -= step; // Рух вниз
+            break;
+        case "a":
+            startScalePoint[0] -= step; // Рух вліво
+            break;
+        case "d":
+            startScalePoint[0] += step; // Рух вправо
+            break;
     }
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    if (surface) {
-        gl.deleteBuffer(surface.vertexBuffer);
-        gl.deleteBuffer(surface.normalBuffer);
-    }
-
-    if (shProgram) {
-        gl.deleteProgram(shProgram.prog);
-    }
-
-    // Reset variables
-    surface = null;
-    shProgram = null;
-
-    init()
-}
+    draw();
+});
