@@ -70,8 +70,7 @@ function draw() {
 
     /* Set the values of the projection transformation */
     let projection = m4.perspective(Math.PI/8, 1, 8, 12); 
-    
-    
+
     let modelView = spaceball.getViewMatrix();
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
     let translateToPointZero = m4.translation(0,0,-10);
@@ -137,12 +136,8 @@ function initGL() {
     surface.BufferData(data.verticesF32, data.indicesU16, data.normalsF32, data.textCoordF32);
 
     surface.iTextureDiffuse  = LoadTexture('textures/diffuse1.jpg');
-    surface.iTextureSpecular = LoadTexture('textures/specular1.png');
-    surface.iTextureNormal = LoadTexture('textures/normal1.png');
-
-    sphere = new Model('Sphere');
-    let sphereVertices = generateSphere(center, sphereRadius, latitudeBands, longitudeBands);
-    sphere.PointBufferData(sphereVertices);
+    surface.iTextureSpecular = LoadTexture('textures/specular1.jpg');
+    surface.iTextureNormal = LoadTexture('textures/normal1.jpg');
 
     gl.enable(gl.DEPTH_TEST);
 }
