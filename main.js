@@ -16,6 +16,7 @@ function ShaderProgram(name, program) {
     this.iAttribVertex = -1;
     this.iAttribNormal = -1;
     this.iAttribTextureCoord = -1;
+    this.iAttribTangent = -1;
     this.iModelViewProjectionMatrix = -1;
     this.iModelViewMatrix  = -1;
     this.iColor = -1;
@@ -91,6 +92,7 @@ function initGL() {
     shProgram.iAttribVertex              = gl.getAttribLocation(prog, "vertex");
     shProgram.iAttribNormal              = gl.getAttribLocation(prog, "normal");
     shProgram.iAttribTextureCoord        = gl.getAttribLocation(prog, "texCoord");
+    shProgram.iAttribTangent              = gl.getAttribLocation(prog, "tangent");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iModelViewMatrix           = gl.getUniformLocation(prog, "ModelViewMatrix");
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
@@ -102,11 +104,11 @@ function initGL() {
     CreateSurfaceData(data)
 
     surface = new Model('Surface');
-    surface.BufferData(data.verticesF32, data.indicesU16, data.normalsF32, data.textCoordF32);
+    surface.BufferData(data.verticesF32, data.indicesU16, data.normalsF32, data.textCoordF32, data.tangentsF32);
 
-    surface.iTextureDiffuse  = LoadTexture('textures/diffuse.jpg');
-    surface.iTextureSpecular = LoadTexture('textures/specular.png');
-    surface.iTextureNormal = LoadTexture('textures/normal.png');
+    surface.iTextureDiffuse  = LoadTexture('textures/diffuse1.jpg');
+    surface.iTextureSpecular = LoadTexture('textures/specular1.jpg');
+    surface.iTextureNormal = LoadTexture('textures/normal1.jpg');
 
     gl.enable(gl.DEPTH_TEST);
 }

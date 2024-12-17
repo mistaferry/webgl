@@ -26,6 +26,7 @@ function Model(name) {
     this.iIndexBuffer = gl.createBuffer();
     this.iNormalBuffer = gl.createBuffer();
     this.iTextureBuffer = gl.createBuffer();
+    this.iTangentBuffer = gl.createBuffer();
     this.count = 0;
 
     // Identifier of a diffuse texture
@@ -33,7 +34,7 @@ function Model(name) {
     this.iTextureSpecular = -1;
     this.iTextureNormal = -1;
 
-    this.BufferData = function(vertices, indices, normals, textCoord) {
+    this.BufferData = function(vertices, indices, normals, textCoord, tangents) {
         // Vertex buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
@@ -49,6 +50,10 @@ function Model(name) {
         // Texture buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, textCoord, gl.STATIC_DRAW);
+
+        // // Tangent buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTangentBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, tangents, gl.STATIC_DRAW);
 
         this.count = indices.length;
     }
@@ -75,6 +80,10 @@ function Model(name) {
         gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribNormal);
 
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTangentBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribTangent, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribTangent);
+
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
         gl.vertexAttribPointer(shProgram.iAttribTextureCoord, 2, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribTextureCoord);
@@ -92,6 +101,7 @@ function CreateSurfaceData(data) {
     let renderVertices = [];
     let allTriangles = [];
     let facetNormals = [];
+    let tangents = [];
 
     uPolysNum = document.getElementById("u").value;
     vPolysNum = document.getElementById("v").value;
@@ -99,12 +109,12 @@ function CreateSurfaceData(data) {
     // Surface vertex data generation
     let originalVertices = CreateVertexData(uPolysNum, vPolysNum);
     
-    processData(vPolysNum, uPolysNum, allTriangles, originalVertices, renderVertices, facetNormals);
+    processData(vPolysNum, uPolysNum, allTriangles, originalVertices, renderVertices, facetNormals, tangents);
 
-    prepareRenderData(data, renderVertices, allTriangles, facetNormals);
+    prepareRenderData(data, renderVertices, allTriangles, facetNormals, tangents);
 }
 
-function prepareRenderData(data, renderVertices, allTriangles, facetNormals){
+function prepareRenderData(data, renderVertices, allTriangles, facetNormals, tangents){
     // Populate texture buffer
     data.textCoordF32 = new Float32Array(renderVertices.length * 2);
 
@@ -134,9 +144,17 @@ function prepareRenderData(data, renderVertices, allTriangles, facetNormals){
         data.normalsF32[i * 3 + 1] = facetNormals[i][1];
         data.normalsF32[i * 3 + 2] = facetNormals[i][2];
     }
+
+    // Populate tangent buffer
+    data.tangentsF32 = new Float32Array(tangents.length * 3);
+    for (let i = 0, len = tangents.length; i < len; i++) {
+        data.tangentsF32[i * 3 + 0] = tangents[i][0];
+        data.tangentsF32[i * 3 + 1] = tangents[i][1];
+        data.tangentsF32[i * 3 + 2] = tangents[i][2];
+    }
 }
 
-function processData(vPolysNum, uPolysNum, triangles, originalVertices, renderVertices, facetNormals) {
+function processData(vPolysNum, uPolysNum, triangles, originalVertices, renderVertices, facetNormals, tangents) {
     calculateAverageFacetNormal(originalVertices);
 
     for (let lineIndex = 1; lineIndex < vPolysNum; lineIndex++) {
@@ -156,7 +174,7 @@ function processData(vPolysNum, uPolysNum, triangles, originalVertices, renderVe
             createTriangle(v2ind, v1ind, v0ind, originalVertices, renderVertices, triangles, facetNormals);
         }
     }
-    
+    calculateTangent(triangles, tangents, renderVertices);
 }
 
 function createTriangle(v0ind, v1ind, v2ind, originalVertices, renderVertices, triangles, facetNormals){
@@ -265,4 +283,43 @@ function calculateAverageFacetNormal(originalVertices){
             count++;
         }
     }
+}
+
+
+function calculateTangent(triangles, tangents, renderVertices){
+    for (let i=0; i<triangles.length; i++) {
+        let currTriangle = triangles[i];
+        let v0ind = currTriangle.v0;
+        let v1ind = currTriangle.v1;
+        let v2ind = currTriangle.v2;
+
+        let v0 = renderVertices[v0ind];
+        let v1 = renderVertices[v1ind];
+        let v2 = renderVertices[v2ind];
+
+        let tangent = getTangent(v0, v1, v2); 
+        v0.tangent = tangent;
+        v1.tangent = tangent;
+        v2.tangent = tangent;
+        triangles[i].tangent = tangent;
+
+        tangents.push(tangent, tangent, tangent);
+    }
+}
+
+function getTangent(v0, v1, v2) {
+    let edge1 = [v1.p[0] - v0.p[0], v1.p[1] - v0.p[1], v1.p[2] - v0.p[2]];
+    let edge2 = [v2.p[0] - v0.p[0], v2.p[1] - v0.p[1], v2.p[2] - v0.p[2]];
+
+    let uv1 = [v1.t[0] - v0.t[0], v1.t[1] - v0.t[1]];
+    let uv2 = [v2.t[0] - v0.t[0], v2.t[1] - v0.t[1]];
+
+    let det = (uv1[0] * uv2[1] - uv1[1] * uv2[0]);
+
+    let Tx = (edge1[0] * uv2[1] - edge2[0] * uv1[1]) / det;
+    let Ty = (edge1[1] * uv2[1] - edge2[1] * uv1[1]) / det;
+    let Tz = (edge1[2] * uv2[1] - edge2[2] * uv1[1]) /det;
+
+    let tangent = [Tx, Ty, Tz];
+    return tangent;
 }
